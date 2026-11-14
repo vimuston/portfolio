@@ -54,13 +54,24 @@
       box-shadow: 0 8px 30px rgba(156, 200, 255, .12);
       outline: none;
     }
-    .tile img {
-      display: block;
-      width: 100%;
+    .tile .media {
+      position: relative;
       aspect-ratio: 16 / 10;
-      object-fit: cover;
       background: #000;
+      overflow: hidden;
     }
+    .tile .media img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: opacity .3s ease;
+    }
+    .tile .media img.contain { object-fit: contain; padding: 6%; }
+    .tile .media img.hover { opacity: 0; }
+    .tile:hover .media img.hover,
+    .tile:focus-visible .media img.hover { opacity: 1; }
     .tile .body { padding: 14px 16px 16px; }
     .tile h2 { margin: 0 0 4px; font-size: 1.1rem; }
     .tile p { margin: 0; color: var(--muted); font-size: .92rem; }
@@ -82,6 +93,7 @@
 
   <script>
     // Add a new project: drop its image in /images and add an entry here.
+    // Optional: fit: "contain" (show whole image, e.g. a logo), hoverImage: "images/x.webp".
     const projects = [
       {
         title: "Afterglow",
@@ -107,6 +119,14 @@
         image: "images/terra-viva.jpg",
         url: "https://vimuston.github.io/terra-viva/"
       },
+      {
+        title: "Super Dungeon Crawl",
+        description: "",
+        image: "images/sdc-logo.png",
+        fit: "contain",
+        hoverImage: "images/sdc-gameplay.webp",
+        url: "https://github.com/vimuston/super-dungeon-crawl"
+      },
     ];
 
     const list = document.getElementById("projects");
@@ -116,10 +136,22 @@
       a.className = "tile";
       a.href = p.url;
 
+      const media = document.createElement("div");
+      media.className = "media";
       const img = document.createElement("img");
       img.src = p.image;
       img.alt = p.title + " screenshot";
       img.loading = "lazy";
+      if (p.fit === "contain") img.classList.add("contain");
+      media.appendChild(img);
+      if (p.hoverImage) {
+        const hov = document.createElement("img");
+        hov.src = p.hoverImage;
+        hov.alt = "";
+        hov.loading = "lazy";
+        hov.className = "hover";
+        media.appendChild(hov);
+      }
 
       const body = document.createElement("div");
       body.className = "body";
@@ -132,7 +164,7 @@
         body.appendChild(d);
       }
 
-      a.append(img, body);
+      a.append(media, body);
       li.appendChild(a);
       list.appendChild(li);
     }
