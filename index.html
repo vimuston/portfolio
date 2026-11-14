@@ -38,8 +38,11 @@
       margin: 0;
       list-style: none;
     }
+    .grid > li { display: flex; }
     .tile {
-      display: block;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 12px;
@@ -56,6 +59,7 @@
     }
     .tile .media {
       position: relative;
+      flex: none;
       aspect-ratio: 16 / 10;
       background: #000;
       overflow: hidden;
