@@ -97,7 +97,8 @@
 
   <script>
     // Add a new project: drop its image in /images and add an entry here.
-    // Optional: fit: "contain" (show whole image, e.g. a logo), hoverImage: "images/x.webp".
+    // Optional: fit: "contain" (show whole image, e.g. a logo), hoverImage: "images/x.webp",
+    // hoverPosition: "center bottom" (which part of the hover image to keep when cropped).
     const projects = [
       {
         title: "Afterglow",
@@ -110,6 +111,7 @@
         description: "Become Leonid Toptunov, Chernobyl Nuclear Power Plant engineer on that fateful night in 1986.",
         image: "images/az5.jpg",
         hoverImage: "images/az5-alt.png",
+        hoverPosition: "center bottom",
         url: "https://vimuston.github.io/az5/"
       },
       {
@@ -164,6 +166,7 @@
         hov.alt = "";
         hov.loading = "lazy";
         hov.className = "hover";
+        if (p.hoverPosition) hov.style.objectPosition = p.hoverPosition;
         media.appendChild(hov);
       }
 
