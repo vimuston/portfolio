@@ -228,7 +228,7 @@
     // Hover sound: off by default. Browsers only allow audio after the visitor has
     // clicked something, so the header toggle doubles as the unlock.
     const Hover = (() => {
-      const VOL = 0.7, FADE_IN = 120, FADE_OUT = 350;
+      const VOL = 0.4, FADE_IN = 900, FADE_OUT = 1200;
       const clips = new Map();
       let on = false;
       try { on = localStorage.getItem("portfolio-sound") === "1"; } catch {}
@@ -238,21 +238,19 @@
         if (!c) {
           const el = new Audio(src);
           el.preload = "auto";
-          c = { el, raf: 0, end: 0 };
+          c = { el, raf: 0 };
           clips.set(src, c);
         }
         return c;
       }
       function fade(c, to, ms, done) {
-        cancelAnimationFrame(c.raf); clearTimeout(c.end);
+        clearInterval(c.raf);
         const from = c.el.volume, t0 = performance.now();
-        const step = (now) => {
-          c.el.volume = from + (to - from) * Math.min(1, (now - t0) / ms);
-          c.raf = requestAnimationFrame(step);
-        };
-        c.raf = requestAnimationFrame(step);
-        // a timer finishes the fade even when animation frames are throttled
-        c.end = setTimeout(() => { cancelAnimationFrame(c.raf); c.el.volume = to; if (done) done(); }, ms);
+        c.raf = setInterval(() => {
+          const k = Math.min(1, (performance.now() - t0) / ms);
+          c.el.volume = from + (to - from) * k * k * (3 - 2 * k);  // smoothstep: gentle start and end
+          if (k >= 1) { clearInterval(c.raf); if (done) done(); }
+        }, 25);
       }
       function play(src) {
         if (!on) return;
@@ -277,7 +275,7 @@
         btn.setAttribute("aria-pressed", String(v));
         btn.textContent = v ? "♪ Sound on" : "♪ Sound off";
         if (v) projects.forEach((p) => p.sound && clip(p.sound));
-        else clips.forEach((c) => { cancelAnimationFrame(c.raf); clearTimeout(c.end); c.el.pause(); });
+        else clips.forEach((c) => { clearInterval(c.raf); c.el.pause(); });
       }
       const btn = document.getElementById("soundToggle");
       btn.addEventListener("click", () => set(!on));
