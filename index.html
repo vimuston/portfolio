@@ -13,6 +13,8 @@
       --text: #e8e8ec;
       --muted: #8b8b96;
       --accent: #9cc8ff;
+      --glyph: #6fe3b0;
+      --mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
     }
     * { box-sizing: border-box; }
     body {
@@ -30,8 +32,19 @@
       padding-top: 56px; padding-bottom: 32px;
       display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;
     }
-    h1 { margin: 0 0 6px; font-size: 2rem; letter-spacing: -0.02em; }
-    header p { margin: 0; color: var(--muted); }
+    h1 {
+      margin: 0 0 8px;
+      font-family: var(--mono); font-size: 2.6rem; line-height: 1.1; letter-spacing: .02em;
+    }
+    h1 .x { color: var(--glyph); opacity: .8; }
+    header p { margin: 0; color: var(--muted); font-family: var(--mono); min-height: 1.5em; }
+    header .cur {
+      display: inline-block; width: .6em; height: 1.05em; margin-left: 2px; vertical-align: -0.15em;
+      background: var(--glyph); animation: blink 1s steps(1) infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) { header .cur { animation: none; } }
+    @media (max-width: 600px) { h1 { font-size: 2rem; } }
 
     .sound-toggle {
       flex: none;
@@ -107,14 +120,19 @@
     .tile h2 { margin: 0 0 4px; font-size: 1.1rem; }
     .tile p { margin: 0; color: var(--muted); font-size: .92rem; }
 
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+      overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+    }
+
     footer { padding-top: 48px; padding-bottom: 32px; color: var(--muted); font-size: .85rem; }
   </style>
 </head>
 <body>
   <header>
     <div>
-      <h1>Portfolio</h1>
-      <p>Interactive experiments in the browser</p>
+      <h1><span class="sr-only">Portfolio</span><span id="title" aria-hidden="true">Portfolio</span></h1>
+      <p><span class="sr-only">Interactive experiments in the browser</span><span id="subtitle" aria-hidden="true">Interactive experiments in the browser</span></p>
     </div>
     <button class="sound-toggle" id="soundToggle" type="button" aria-pressed="false"
             title="Play a short sound clip from each demo when you hover its tile">♪ Sound off</button>
@@ -182,6 +200,30 @@
         url: "https://vimuston.github.io/helix/"
       },
     ];
+
+    // Header: the title resolves out of random glyphs (DNA letters and ASCII),
+    // then the subtitle types itself. Plain text stays for no-JS and reduced motion.
+    (() => {
+      const h = document.getElementById("title"), s = document.getElementById("subtitle");
+      if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      const T = h.textContent, S = s.textContent, G = "ACGT#%@&*+=<>/\\|";
+      s.innerHTML = '<span class="cur"></span>';
+      let f = 0;
+      const a = setInterval(() => {
+        const fixed = Math.floor(f / 3);
+        h.innerHTML = [...T].map((c, i) => i < fixed ? c :
+          '<span class="x">' + G[Math.floor(Math.random() * G.length)].replace("<", "&lt;").replace(">", "&gt;") + "</span>").join("");
+        if (++f > T.length * 3) {
+          clearInterval(a);
+          h.textContent = T;
+          let i = 0;
+          const b = setInterval(() => {
+            s.innerHTML = S.slice(0, ++i) + '<span class="cur"></span>';
+            if (i >= S.length) clearInterval(b);
+          }, 35);
+        }
+      }, 45);
+    })();
 
     // Hover sound: off by default. Browsers only allow audio after the visitor has
     // clicked something, so the header toggle doubles as the unlock.
