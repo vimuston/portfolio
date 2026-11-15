@@ -228,7 +228,7 @@
     // Hover sound: off by default. Browsers only allow audio after the visitor has
     // clicked something, so the header toggle doubles as the unlock.
     const Hover = (() => {
-      const VOL = 0.4, FADE_IN = 900, FADE_OUT = 1200;
+      const VOL = 0.4, FADE_IN = 900, FADE_OUT = 450;
       const clips = new Map();
       let on = false;
       try { on = localStorage.getItem("portfolio-sound") === "1"; } catch {}
