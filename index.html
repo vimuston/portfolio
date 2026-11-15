@@ -26,9 +26,36 @@
       margin: 0 auto;
       padding: 0 16px;
     }
-    header { padding-top: 56px; padding-bottom: 32px; }
+    header {
+      padding-top: 56px; padding-bottom: 32px;
+      display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;
+    }
     h1 { margin: 0 0 6px; font-size: 2rem; letter-spacing: -0.02em; }
     header p { margin: 0; color: var(--muted); }
+
+    .sound-toggle {
+      flex: none;
+      font: inherit; font-size: .85rem;
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 14px;
+      cursor: pointer;
+      transition: color .15s ease, border-color .15s ease;
+    }
+    .sound-toggle:hover, .sound-toggle:focus-visible { color: var(--text); border-color: var(--accent); outline: none; }
+    .sound-toggle[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+
+    .tile .media .sound-badge {
+      position: absolute; right: 10px; bottom: 10px;
+      font-size: .75rem; line-height: 1;
+      color: #fff; background: rgba(0, 0, 0, .55);
+      border-radius: 999px; padding: 5px 8px;
+      opacity: 0; transition: opacity .2s ease;
+      pointer-events: none;
+    }
+    body.sound-on .tile:hover .sound-badge { opacity: 1; }
 
     .grid {
       display: grid;
@@ -85,8 +112,12 @@
 </head>
 <body>
   <header>
-    <h1>Portfolio</h1>
-    <p>Interactive experiments in the browser</p>
+    <div>
+      <h1>Portfolio</h1>
+      <p>Interactive experiments in the browser</p>
+    </div>
+    <button class="sound-toggle" id="soundToggle" type="button" aria-pressed="false"
+            title="Play a short sound clip from each demo when you hover its tile">♪ Sound off</button>
   </header>
 
   <main>
@@ -98,13 +129,15 @@
   <script>
     // Add a new project: drop its image in /images and add an entry here.
     // Optional: fit: "contain" (show whole image, e.g. a logo), hoverImage: "images/x.webp",
-    // hoverPosition: "center bottom" (which part of the hover image to keep when cropped).
+    // hoverPosition: "center bottom" (which part of the hover image to keep when cropped),
+    // sound: "audio/x.mp3" (clip played on hover once the visitor turns sound on).
     const projects = [
       {
         title: "Afterglow",
         description: "Short dungeon adventure with animated ASCII characters and glowing effects.",
         image: "images/afterglow.webp",
         hoverImage: "images/afterglow-alt.webp",
+        sound: "audio/afterglow.mp3",
         url: "https://vimuston.github.io/afterglow/"
       },
       {
@@ -113,6 +146,7 @@
         image: "images/az5.jpg",
         hoverImage: "images/az5-alt.png",
         hoverPosition: "center bottom",
+        sound: "audio/az5.mp3",
         url: "https://vimuston.github.io/az5/"
       },
       {
@@ -120,6 +154,7 @@
         description: "Four billion years of evolution, from the first cell to the first land animal, with procedural canvas art and a video finale.",
         image: "images/luca.jpg",
         hoverImage: "images/luca-alt.webp",
+        sound: "audio/luca.mp3",
         url: "https://vimuston.github.io/luca/"
       },
       {
@@ -127,6 +162,7 @@
         description: "Terraform a frozen world from orbit, sleeping through millennia while a simulated climate and biosphere evolve.",
         image: "images/terra-viva.jpg",
         hoverImage: "images/terra-viva-alt.webp",
+        sound: "audio/terra-viva.mp3",
         url: "https://vimuston.github.io/terra-viva/"
       },
       {
@@ -142,9 +178,70 @@
         description: "Zoomable double-helix explorer of three public genomes.",
         image: "images/helix.png",
         hoverImage: "images/helix-sequence.png",
+        sound: "audio/helix.mp3",
         url: "https://vimuston.github.io/helix/"
       },
     ];
+
+    // Hover sound: off by default. Browsers only allow audio after the visitor has
+    // clicked something, so the header toggle doubles as the unlock.
+    const Hover = (() => {
+      const VOL = 0.7, FADE_IN = 120, FADE_OUT = 350;
+      const clips = new Map();
+      let on = false;
+      try { on = localStorage.getItem("portfolio-sound") === "1"; } catch {}
+
+      function clip(src) {
+        let c = clips.get(src);
+        if (!c) {
+          const el = new Audio(src);
+          el.preload = "auto";
+          c = { el, raf: 0, end: 0 };
+          clips.set(src, c);
+        }
+        return c;
+      }
+      function fade(c, to, ms, done) {
+        cancelAnimationFrame(c.raf); clearTimeout(c.end);
+        const from = c.el.volume, t0 = performance.now();
+        const step = (now) => {
+          c.el.volume = from + (to - from) * Math.min(1, (now - t0) / ms);
+          c.raf = requestAnimationFrame(step);
+        };
+        c.raf = requestAnimationFrame(step);
+        // a timer finishes the fade even when animation frames are throttled
+        c.end = setTimeout(() => { cancelAnimationFrame(c.raf); c.el.volume = to; if (done) done(); }, ms);
+      }
+      function play(src) {
+        if (!on) return;
+        const c = clip(src);
+        c.want = true;
+        c.el.currentTime = 0;
+        c.el.volume = 0;
+        c.el.play().then(() => {
+          if (c.want) fade(c, VOL, FADE_IN); else c.el.pause();  // pointer may have left already
+        }).catch(() => {});
+      }
+      function stop(src) {
+        const c = clips.get(src);
+        if (!c) return;
+        c.want = false;
+        if (!c.el.paused) fade(c, 0, FADE_OUT, () => c.el.pause());
+      }
+      function set(v) {
+        on = v;
+        try { localStorage.setItem("portfolio-sound", v ? "1" : "0"); } catch {}
+        document.body.classList.toggle("sound-on", v);
+        btn.setAttribute("aria-pressed", String(v));
+        btn.textContent = v ? "♪ Sound on" : "♪ Sound off";
+        if (v) projects.forEach((p) => p.sound && clip(p.sound));
+        else clips.forEach((c) => { cancelAnimationFrame(c.raf); clearTimeout(c.end); c.el.pause(); });
+      }
+      const btn = document.getElementById("soundToggle");
+      btn.addEventListener("click", () => set(!on));
+      set(on);
+      return { play, stop };
+    })();
 
     const list = document.getElementById("projects");
     for (const p of projects) {
@@ -169,6 +266,15 @@
         hov.className = "hover";
         if (p.hoverPosition) hov.style.objectPosition = p.hoverPosition;
         media.appendChild(hov);
+      }
+      if (p.sound) {
+        const badge = document.createElement("span");
+        badge.className = "sound-badge";
+        badge.textContent = "♪";
+        badge.setAttribute("aria-hidden", "true");
+        media.appendChild(badge);
+        a.addEventListener("mouseenter", () => Hover.play(p.sound));
+        a.addEventListener("mouseleave", () => Hover.stop(p.sound));
       }
 
       const body = document.createElement("div");
